@@ -1,0 +1,45 @@
+name:                symspell
+version:             0.1.0.0
+github:              "cbeav/symspell"
+license:             BSD3
+author:              "Chris Beavers"
+maintainer:          "crbeavers@gmail.com"
+copyright:           "2018 Live Diagonal, Inc."
+
+extra-source-files:
+- README.md
+- CHANGELOG.md
+
+description: Please see the README on GitHub at <https://github.com/cbeav/symspell#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- attoparsec
+- classy-prelude
+- containers
+- data-default
+- text
+- text-metrics
+- unordered-containers
+
+library:
+  source-dirs: src
+
+default-extensions:
+- NoImplicitPrelude
+- OverloadedStrings
+- RecordWildCards
+- DeriveGeneric
+- ScopedTypeVariables
+- TupleSections
+
+executables:
+  symspell:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - symspell
