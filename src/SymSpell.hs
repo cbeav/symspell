@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 module SymSpell
   ( fromList
   , suggest
@@ -8,6 +9,7 @@ module SymSpell
   ) where
 
 import ClassyPrelude hiding (fromList)
+import Closed
 import Control.Arrow ((&&&))
 import Data.Bits
 import Data.Default
@@ -24,22 +26,29 @@ data Verbosity
   | All
   deriving (Eq, Show)
 
+type CompactionLevel = Closed 0 16
+
 data SymSpellConfig
   = SymSpellConfig
   { symSpellConfigMaxEditDistance :: !Int
   , symSpellConfigPrefixLength    :: !Int
-  , symSpellConfigCompactLevel    :: !Int
+  , symSpellConfigCompactionLevel :: !CompactionLevel
   } deriving (Eq, Show)
 
 instance Default SymSpellConfig where
   def = SymSpellConfig 2 7 5
 
+type PrefixFunction = Text -> Text
+
+type HashFunction = Text -> Word32
+
 data SymSpell
   = SymSpell
-  { symSpellConfig      :: !SymSpellConfig
+  { symSpellPrefix      :: !PrefixFunction
+  , symSpellHash        :: !HashFunction
   , symSpellDeletes     :: !(HashMap Word32 (Set Text))
   , symSpellFrequencies :: !(HashMap Text Int)
-  } deriving (Eq, Show)
+  }
 
 data Suggestion
   = Suggestion
@@ -48,11 +57,12 @@ data Suggestion
   } deriving (Eq, Show)
 
 fromList :: SymSpellConfig -> [(Text, Int)] -> SymSpell
-fromList symSpellConfig@SymSpellConfig{..} items =
+fromList SymSpellConfig{..} items =
   let
-    hash = symSpellHash symSpellConfig
+    symSpellPrefix = take symSpellConfigPrefixLength
+    symSpellHash = compactHash symSpellConfigCompactionLevel
     words = map fst items
-    deleteHashes = toList . Set.map hash . deletesPrefix symSpellConfig
+    deleteHashes = toList . Set.map symSpellHash . deletesPrefix symSpellPrefix symSpellConfigMaxEditDistance
     deleteMap w = HashMap.fromList . map (,Set.singleton w) $ deleteHashes w
     symSpellFrequencies = HashMap.fromList items
     symSpellDeletes = foldr (HashMap.unionWith Set.union . deleteMap) HashMap.empty words
@@ -62,10 +72,8 @@ fromList symSpellConfig@SymSpellConfig{..} items =
 suggest :: SymSpell -> Int -> Text -> Verbosity -> [Suggestion]
 suggest SymSpell{..} maxDistance input verbosity =
   let
-    hash = symSpellHash symSpellConfig
-    prefixLength = symSpellConfigPrefixLength symSpellConfig
-    searchSpace = candidatesWithinDistance maxDistance $ take prefixLength input
-    matchesFor candidate = HashMap.lookupDefault Set.empty (hash candidate) symSpellDeletes
+    searchSpace = candidatesWithinDistance maxDistance $ symSpellPrefix input
+    matchesFor candidate = HashMap.lookupDefault Set.empty (symSpellHash candidate) symSpellDeletes
     matches = toList . Set.unions $ map matchesFor searchSpace
     distances = map (id &&& damerauLevenshtein input) matches
     results = map (uncurry Suggestion) $ sortOn (Down . snd) $ filter ((<= maxDistance) . snd) distances
@@ -76,27 +84,17 @@ suggest SymSpell{..} maxDistance input verbosity =
       (top:_, Top) -> [top]
       _ -> results
 
-symSpellHash :: SymSpellConfig -> Text -> Word32
-symSpellHash SymSpellConfig{..} = maskedHash (compactMask symSpellConfigCompactLevel)
-
-clip :: Ord a => a -> a -> a -> a
-clip a b = (a `max`) . (`min` b)
-
-compactMask :: Int -> Word32
-compactMask level =
-  shiftL (shiftR (maxBound :: Word32) (3 + clip 0 16 level)) 2
-
-maskedHash :: Word32 -> Text -> Word32
-maskedHash mask str =
+compactHash :: CompactionLevel -> HashFunction
+compactHash level str =
   let
+    mask = shiftL (shiftR (maxBound :: Word32) (3 + fromInteger (getClosed level))) 2
     mixChar c = (*16777619) . (`xor` unsafeCoerce c)
     lenMask = min 3 . unsafeCoerce $ length str
   in
     (.|. lenMask) . (.&. mask) $ foldr mixChar 2166136261 str
 
-deletesPrefix :: SymSpellConfig -> Text -> Set Text
-deletesPrefix SymSpellConfig{..} =
-  deletesWithinDistance symSpellConfigMaxEditDistance . take symSpellConfigPrefixLength
+deletesPrefix :: PrefixFunction -> Int -> Text -> Set Text
+deletesPrefix prefix distance = deletesWithinDistance distance . prefix
 
 deletes :: Text -> Set Text
 deletes word =
@@ -114,13 +112,12 @@ deletesWithinDistance edits word =
     Set.unions $ ds : map (deletesWithinDistance (edits - 1)) (Set.toList ds)
 
 candidates :: Text -> [(Text, Int)]
-candidates = candidatesRec 0 . pure
+candidates = candidatesBFS 0 . pure
+ where
+  candidatesBFS _ [] = []
+  candidatesBFS depth words =
+    map (,depth) words ++ candidatesBFS (depth + 1) (Set.toList $ concatMap deletes words)
 
 candidatesWithinDistance :: Int -> Text -> [Text]
 candidatesWithinDistance maxDistance =
   map fst . takeWhile ((<= maxDistance) . snd) . candidates
-
-candidatesRec :: Int -> [Text] -> [(Text, Int)]
-candidatesRec _ [] = []
-candidatesRec depth words =
-  map (,depth) words ++ candidatesRec (depth + 1) (Set.toList $ concatMap deletes words)
