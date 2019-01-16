@@ -8,15 +8,14 @@ arbitrary.
 This project implements the algorithm in Haskell, where it is much less verbose
 than the original C#.
 
-## Getting Started
-We use [Stack](https://docs.haskellstack.org/en/stable/README/) as our build system.
-To compile from source:
+## Building
+To compile with [Stack](https://docs.haskellstack.org/en/stable/README/):
 ```sh
 stack build
 ```
 
-## Example Server
-You can bring up the server with:
+## Test Server
+You can bring up a simple REST API with:
 ```sh
 stack exec symspell-server
 ```
