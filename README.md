@@ -1,4 +1,4 @@
-### Haskell SymSpell
+## Haskell SymSpell
 
 The [SymSpell](https://github.com/wolfgarbe/SymSpell) algorithm pre-computes all
 deletions within fixed distance of a source dictionary. Leveraging a symmetry in
@@ -8,13 +8,13 @@ arbitrary.
 This project implements the algorithm in Haskell, where it is much less verbose
 than the original C#.
 
-## Building
+### Building
 To compile with [Stack](https://docs.haskellstack.org/en/stable/README/):
 ```sh
 stack build
 ```
 
-## Test Server
+### Server
 You can bring up a simple REST API with:
 ```sh
 stack exec symspell-server
