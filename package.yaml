@@ -37,7 +37,7 @@ default-extensions:
 - TupleSections
 
 executables:
-  symspell:
+  symspell-server:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

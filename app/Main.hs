@@ -34,4 +34,10 @@ main :: IO ()
 main = do
   port <- maybe 8080 read <$> lookupEnv "PORT"
   symSpell <- fromFile def "resources/frequencies.txt"
+  putStrLn $ unwords
+    [ "Loaded"
+    , tshow . length $ symSpellFrequencies symSpell
+    , "word frequencies"
+    ]
+  putStrLn $ "Listening on port " ++ tshow port
   run port . serve symSpellApi $ server symSpell
