@@ -11,14 +11,16 @@ module SymSpell
 import ClassyPrelude hiding (fromList)
 import Closed
 import Control.Arrow ((&&&))
+import Data.Aeson
+import Data.Aeson.Casing
 import Data.Bits
+import Data.Char (ord)
 import Data.Default
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text.Metrics (damerauLevenshtein)
-import Unsafe.Coerce (unsafeCoerce)
 
 data Verbosity
   = Top
@@ -54,7 +56,10 @@ data Suggestion
   = Suggestion
   { suggestionWord     :: !Text
   , suggestionDistance :: !Int
-  } deriving (Eq, Show)
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Suggestion where
+  toJSON = genericToJSON $ aesonDrop 10 camelCase
 
 fromList :: SymSpellConfig -> [(Text, Int)] -> SymSpell
 fromList SymSpellConfig{..} items =
@@ -69,8 +74,8 @@ fromList SymSpellConfig{..} items =
   in
     SymSpell{..}
 
-suggest :: SymSpell -> Int -> Text -> Verbosity -> [Suggestion]
-suggest SymSpell{..} maxDistance input verbosity =
+suggest :: SymSpell -> Int -> Verbosity -> Text -> [Suggestion]
+suggest SymSpell{..} maxDistance verbosity input =
   let
     searchSpace = candidatesWithinDistance maxDistance $ symSpellPrefix input
     matchesFor candidate = HashMap.lookupDefault Set.empty (symSpellHash candidate) symSpellDeletes
@@ -88,8 +93,8 @@ compactHash :: CompactionLevel -> HashFunction
 compactHash level str =
   let
     mask = shiftL (shiftR (maxBound :: Word32) (3 + fromInteger (getClosed level))) 2
-    mixChar c = (*16777619) . (`xor` unsafeCoerce c)
-    lenMask = min 3 . unsafeCoerce $ length str
+    mixChar c = (*16777619) . (`xor` fromIntegral (ord c))
+    lenMask = min 3 . fromIntegral $ length str
   in
     (.|. lenMask) . (.&. mask) $ foldr mixChar 2166136261 str
 

@@ -13,8 +13,10 @@ extra-source-files:
 description: Please see the README on GitHub at <https://github.com/cbeav/symspell#readme>
 
 dependencies:
-- base >= 4.7 && < 5
+- aeson
+- aeson-casing
 - attoparsec
+- base >= 4.7 && < 5
 - classy-prelude
 - closed
 - containers
@@ -43,4 +45,8 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
+    - servant
+    - servant-server
     - symspell
+    - wai
+    - warp
