@@ -3,7 +3,7 @@
 The [SymSpell](https://github.com/wolfgarbe/SymSpell) algorithm pre-computes all
 deletions within fixed distance of a source dictionary. Leveraging a symmetry in
 edit distance, this can massively restrict the search space for spell checking
-arbitrary.
+words.
 
 This project implements the algorithm in Haskell, where it is much less verbose
 than the original C#.
