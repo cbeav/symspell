@@ -15,11 +15,6 @@ stack build
 ```
 
 ### Example Server
-To run the example server, first build with the appropriate flag:
-```sh
-stack build --example
-```
-
 You can then bring up a simple REST API with:
 ```sh
 stack exec symspell-server
