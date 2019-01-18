@@ -14,8 +14,13 @@ To compile with [Stack](https://docs.haskellstack.org/en/stable/README/):
 stack build
 ```
 
-### Server
-You can bring up a simple REST API with:
+### Example Server
+To run the example server, first build with the appropriate flag:
+```sh
+stack build --example
+```
+
+You can then bring up a simple REST API with:
 ```sh
 stack exec symspell-server
 ```

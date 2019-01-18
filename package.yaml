@@ -1,16 +1,18 @@
+---
 name:                symspell
 version:             0.1.0.0
-github:              "cbeav/symspell"
+synopsis:            SymSpell spelling correction
+description:         Efficient spellchecking through symmetric delete pre-computation
+category:            Language
+github:              cbeav/symspell
 license:             BSD3
-author:              "Chris Beavers"
-maintainer:          "crbeavers@gmail.com"
-copyright:           "2018 Live Diagonal, Inc."
+author:              Chris Beavers
+maintainer:          Chris Beavers <crbeavers@gmail.com>
+homepage:            http://github.com/cbeav/symspell
 
 extra-source-files:
 - README.md
 - CHANGELOG.md
-
-description: Please see the README on GitHub at <https://github.com/cbeav/symspell#readme>
 
 dependencies:
 - aeson
@@ -39,7 +41,7 @@ default-extensions:
 executables:
   symspell-server:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         example
     ghc-options:
     - -threaded
     - -rtsopts
@@ -50,3 +52,19 @@ executables:
     - symspell
     - wai
     - warp
+    when:
+      - condition: ! '!(flag(example))'
+        buildable: false
+tests:
+  test:
+    main: Spec.hs
+    source-dirs: test
+    dependencies:
+      - hspec
+      - symspell
+
+flags:
+  example:
+    description: Build the example application
+    manual: false
+    default: false
