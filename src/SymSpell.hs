@@ -9,8 +9,8 @@ module SymSpell
   , suggest
   , SymSpell(..)
   , SymSpellConfig(..)
-  , Suggestion(..)
-  , Verbosity(..)
+  , SymSpellSuggestion(..)
+  , SymSpellVerbosity(..)
   ) where
 
 import ClassyPrelude hiding (fromList)
@@ -32,7 +32,7 @@ import Data.Text.Metrics (damerauLevenshtein)
 -- 'Top' returns the most common, lowest distance relative.
 -- 'Closest` returns all suggestions of lowest matched distance.
 -- 'All' provides all suggestions within the given distance cap.
-data Verbosity
+data SymSpellVerbosity
   = Top
   | Closest
   | All
@@ -78,14 +78,14 @@ data SymSpell
 
 -- | Suggestions reference a dictionary word and an edit distance from
 -- the provided target.
-data Suggestion
-  = Suggestion
-  { suggestionWord     :: !Text
-  , suggestionDistance :: !Int
+data SymSpellSuggestion
+  = SymSpellSuggestion
+  { symSpellSuggestionWord     :: !Text
+  , symSpellSuggestionDistance :: !Int
   } deriving (Eq, Show, Generic)
 
-instance ToJSON Suggestion where
-  toJSON = genericToJSON $ aesonDrop 10 camelCase
+instance ToJSON SymSpellSuggestion where
+  toJSON = genericToJSON $ aesonDrop (length ("symSpellSuggestion" :: Text)) camelCase
 
 -- | Construct a 'SymSpell' from a 'SymSpellConfig' and frequency tuples.
 fromList :: SymSpellConfig -> [(Text, Int)] -> SymSpell
@@ -101,19 +101,19 @@ fromList SymSpellConfig{..} items =
   in
     SymSpell{..}
 
--- | Generate a list of 'Suggestion' for a given 'SymSpell'.
-suggest :: SymSpell -> Int -> Verbosity -> Text -> [Suggestion]
+-- | Generate a list of 'SymSpellSuggestion' for a given 'SymSpell'.
+suggest :: SymSpell -> Int -> SymSpellVerbosity -> Text -> [SymSpellSuggestion]
 suggest SymSpell{..} maxDistance verbosity input =
   let
     searchSpace = candidatesWithinDistance maxDistance $ symSpellPrefix input
     matchesFor candidate = HashMap.lookupDefault Set.empty (symSpellHash candidate) symSpellDeletes
     matches = toList . Set.unions $ map matchesFor searchSpace
     distances = map (id &&& damerauLevenshtein input) matches
-    results = map (uncurry Suggestion) $ sortOn snd $ filter ((<= maxDistance) . snd) distances
+    results = map (uncurry SymSpellSuggestion) $ sortOn snd $ filter ((<= maxDistance) . snd) distances
   in
     case (results, verbosity) of
       ([], _) -> []
-      (top:_, Closest) -> takeWhile ((== suggestionDistance top) . suggestionDistance) results
+      (top:_, Closest) -> takeWhile ((== symSpellSuggestionDistance top) . symSpellSuggestionDistance) results
       (top:_, Top) -> [top]
       _ -> results
 

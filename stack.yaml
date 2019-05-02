@@ -1,4 +1,7 @@
-resolver: lts-12.13
+resolver: lts-13.3
 
 packages:
 - .
+
+extra-deps:
+- closed-0.2.0.1@sha256:5c0203f70b66b3b59c37c4ecc223949bcc3918050d4aa6efe9e5bc3bd3e48dda
