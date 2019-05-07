@@ -12,7 +12,6 @@ import Network.Wai.Handler.Warp (run)
 import Prelude (read)
 import Servant
 import SymSpell
-import SymSpell.IO (fromFile)
 import System.Environment (lookupEnv)
 
 newtype SymSpellReq

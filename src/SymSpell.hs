@@ -5,7 +5,9 @@
 -- <https://github.com/wolfgarbe/SymSpell SymSpell> algorithm.
 --
 module SymSpell
-  ( fromList
+  ( fromFile
+  , fromFileContents
+  , fromList
   , suggest
   , SymSpell(..)
   , SymSpellConfig(..)
@@ -13,18 +15,23 @@ module SymSpell
   , SymSpellVerbosity(..)
   ) where
 
-import ClassyPrelude hiding (fromList)
+import ClassyPrelude hiding (fromList, head, readFile)
+import Prelude (head, read)
+
 import Closed
 import Control.Arrow ((&&&))
 import Data.Aeson
 import Data.Aeson.Casing
+import Data.Attoparsec.Combinator
+import Data.Attoparsec.Text hiding (take, takeWhile)
 import Data.Bits
 import Data.Char (ord)
 import Data.Default
-import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
+import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.Text.IO (readFile)
 import Data.Text.Metrics (damerauLevenshtein)
 import GHC.Compact
 
@@ -87,6 +94,26 @@ data SymSpellSuggestion
 
 instance ToJSON SymSpellSuggestion where
   toJSON = genericToJSON $ aesonDrop (length ("symSpellSuggestion" :: Text)) camelCase
+
+-- | Read a word and its frequency count separated by a space.
+parseFrequency :: Parser (Text, Int)
+parseFrequency =
+  (,)
+    <$> (parseTextUntil " "     <* " ")
+    <*> ((read <$> many1 digit) <* (endOfLine <|> endOfInput))
+ where
+  parseTextUntil = map pack . manyTill anyChar . lookAhead
+
+-- | Read a frequency file to construct a 'SymSpell'.
+fromFile :: SymSpellConfig -> FilePath -> IO SymSpell
+fromFile config file = fromFileContents config =<< readFile file
+
+-- | Parse many word count tuples from a given newline-delimited,
+-- space separated frequency list and construct a 'SymSpell'.
+fromFileContents :: SymSpellConfig -> Text -> IO SymSpell
+fromFileContents config contents =
+  let Right freqs = parseOnly (many parseFrequency) contents
+  in  fromList config freqs
 
 -- | Construct a 'SymSpell' from a 'SymSpellConfig' and frequency tuples.
 fromList :: SymSpellConfig -> [(Text, Int)] -> IO SymSpell
