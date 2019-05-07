@@ -25,4 +25,4 @@ parseFrequency =
 fromFile :: SymSpellConfig -> FilePath -> IO SymSpell
 fromFile config file = do
   Right freqs <- parseOnly (many parseFrequency) <$> readFile file
-  pure $ fromList config freqs
+  fromList config freqs

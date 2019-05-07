@@ -26,6 +26,7 @@ import qualified Data.Set as Set
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text.Metrics (damerauLevenshtein)
+import GHC.Compact
 
 -- | Verbosity for determining suggestions.
 --
@@ -72,8 +73,8 @@ data SymSpell
   = SymSpell
   { symSpellPrefix      :: !PrefixFunction -- ^ Function to restrict search space.
   , symSpellHash        :: !HashFunction -- ^ Function for compressed hashing.
-  , symSpellDeletes     :: !(HashMap Word32 (Set Text)) -- ^ Pre-computed deletions.
-  , symSpellFrequencies :: !(HashMap Text Int) -- ^ Dictionary with frequency counts.
+  , symSpellDeletes     :: !(Compact (HashMap Word32 (Set Text))) -- ^ Pre-computed deletions.
+  , symSpellFrequencies :: !(Compact (HashMap Text Int)) -- ^ Dictionary with frequency counts.
   }
 
 -- | Suggestions reference a dictionary word and an edit distance from
@@ -88,25 +89,24 @@ instance ToJSON SymSpellSuggestion where
   toJSON = genericToJSON $ aesonDrop (length ("symSpellSuggestion" :: Text)) camelCase
 
 -- | Construct a 'SymSpell' from a 'SymSpellConfig' and frequency tuples.
-fromList :: SymSpellConfig -> [(Text, Int)] -> SymSpell
-fromList SymSpellConfig{..} items =
+fromList :: SymSpellConfig -> [(Text, Int)] -> IO SymSpell
+fromList SymSpellConfig{..} items = do
   let
     symSpellPrefix = take symSpellConfigPrefixLength
     symSpellHash = compactHash symSpellConfigCompactionLevel
     words = map fst items
     deleteHashes = toList . Set.map symSpellHash . deletesPrefix symSpellPrefix symSpellConfigMaxEditDistance
     deleteMap w = HashMap.fromList . map (,Set.singleton w) $ deleteHashes w
-    symSpellFrequencies = HashMap.fromList items
-    symSpellDeletes = foldr (HashMap.unionWith Set.union . deleteMap) HashMap.empty words
-  in
-    SymSpell{..}
+  symSpellFrequencies <- compact $ HashMap.fromList items
+  symSpellDeletes     <- compact $ foldr (HashMap.unionWith Set.union . deleteMap) HashMap.empty words
+  pure SymSpell{..}
 
 -- | Generate a list of 'SymSpellSuggestion' for a given 'SymSpell'.
 suggest :: SymSpell -> Int -> SymSpellVerbosity -> Text -> [SymSpellSuggestion]
 suggest SymSpell{..} maxDistance verbosity input =
   let
     searchSpace = candidatesWithinDistance maxDistance $ symSpellPrefix input
-    matchesFor candidate = HashMap.lookupDefault Set.empty (symSpellHash candidate) symSpellDeletes
+    matchesFor candidate = HashMap.lookupDefault Set.empty (symSpellHash candidate) $ getCompact symSpellDeletes
     matches = toList . Set.unions $ map matchesFor searchSpace
     distances = map (id &&& damerauLevenshtein input) matches
     results = map (uncurry SymSpellSuggestion) $ sortOn snd $ filter ((<= maxDistance) . snd) distances

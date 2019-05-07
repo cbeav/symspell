@@ -13,7 +13,8 @@ spec = do
 
   let
     dictionary = [("shop", 123), ("ship", 456), ("shit", 789), ("word", 314), ("hippopotamus", 1)]
-    symSpell = fromList def dictionary
+
+  symSpell <- runIO $ fromList def dictionary
 
   describe "suggest word" $ do
     it "works for Top with edit distance 0" $

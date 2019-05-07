@@ -23,6 +23,7 @@ dependencies:
 - closed
 - containers
 - data-default
+- ghc-compact
 - text
 - text-metrics
 - unordered-containers
@@ -52,9 +53,7 @@ executables:
     - symspell
     - wai
     - warp
-    when:
-      - condition: ! '!(flag(example))'
-        buildable: false
+
 tests:
   test:
     main: Spec.hs
@@ -62,9 +61,3 @@ tests:
     dependencies:
       - hspec
       - symspell
-
-flags:
-  example:
-    description: Build the example application
-    manual: false
-    default: false

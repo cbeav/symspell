@@ -7,6 +7,7 @@ import ClassyPrelude
 import Data.Aeson
 import Data.Default
 import Data.Proxy
+import GHC.Compact (getCompact)
 import Network.Wai.Handler.Warp (run)
 import Prelude (read)
 import Servant
@@ -22,7 +23,7 @@ newtype SymSpellReq
 instance FromJSON SymSpellReq where
   parseJSON (Object o) = SymSpellReq <$> o .: "word"
 
-type SymSpellApi = "top" :> ReqBody '[JSON] SymSpellReq :> Post '[JSON] [Suggestion]
+type SymSpellApi = "top" :> ReqBody '[JSON] SymSpellReq :> Post '[JSON] [SymSpellSuggestion]
 
 symSpellApi :: Proxy SymSpellApi
 symSpellApi = Proxy
@@ -36,7 +37,7 @@ main = do
   symSpell <- fromFile def "resources/frequencies.txt"
   putStrLn $ unwords
     [ "Loaded"
-    , tshow . length $ symSpellFrequencies symSpell
+    , tshow . length . getCompact $ symSpellFrequencies symSpell
     , "word frequencies"
     ]
   putStrLn $ "Listening on port " ++ tshow port
